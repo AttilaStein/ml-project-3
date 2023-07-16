@@ -5,12 +5,13 @@ from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MaxAbsScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Conv2D, Flatten, Dropout, MaxPooling2D, BatchNormalization
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.models import load_model
+from tensorflow import keras
+from keras.models import Sequential
+from keras.layers import Dense, Conv2D, Flatten, Dropout, MaxPooling2D, BatchNormalization
+from keras.callbacks import EarlyStopping
+from keras.optimizers import Adam
+from keras.utils import to_categorical
+from keras.models import load_model
 import matplotlib.pyplot as plt
 import pandas as pd
 import tensorflow as tf
@@ -51,10 +52,26 @@ def get_performances_normalized(flops, errors, lambda_):
     
     return performances
 
+def generate_line_sequence_data(sequence_length, num_sequences, noise=0.1):
+    X = np.empty((num_sequences, sequence_length))
+    y = np.empty(num_sequences)
+    
+    for i in range(num_sequences):
+        slope = np.random.uniform(-1, 1)
+        intercept = np.random.uniform(-1, 1)
+        x = np.linspace(-1, 1, sequence_length)
+        y[i] = slope * (x[-1] + 1/sequence_length) + intercept  # Next point on the line
+        X[i] = slope * x + intercept + np.random.normal(scale=noise, size=sequence_length)  # Line with noise
+
+    return X[..., np.newaxis], y  # Add an extra dimension to X for the single feature
+
+# Generate the data
+X_train, y_train = generate_line_sequence_data(sequence_length=100, num_sequences=1000)
+X_test, y_test = generate_line_sequence_data(sequence_length=100, num_sequences=200)
 
 
 # Hier werden 3 CNNs erzeugt, mit untschiedlicher Anzahl an Layern und features 
-def create_models(input_shape=(128, 128, 3)):
+def create_cnn_models(input_shape=(128, 128, 3)):
     model1 = Sequential([
         Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
         MaxPooling2D(pool_size=(2, 2)),
@@ -96,7 +113,31 @@ def create_models(input_shape=(128, 128, 3)):
         Dropout(0.5),
         Dense(100, activation='softmax')
     ])
+    
     return (model1,"conv-32-relu"),(model2,"conv-32-32-relu"),(model2_sigmoid,"conv-32-32-sigmoid"),(model3,"conv-32-64-relu")
+
+def create_LSTM_models(): 
+    # Model 1: Single LSTM layer with 128 units
+    model1 = tf.keras.Sequential([
+        tf.keras.layers.LSTM(128),
+        tf.keras.layers.Dense(1)
+    ])
+
+    # Model 2: Two LSTM layers with 64 and 32 units
+    model2 = tf.keras.Sequential([
+        tf.keras.layers.LSTM(64, return_sequences=True),
+        tf.keras.layers.LSTM(32),
+        tf.keras.layers.Dense(1)
+    ])
+
+    model3 = tf.keras.Sequential([
+        tf.keras.layers.LSTM(64, return_sequences=True),
+        tf.keras.layers.LSTM(32),
+        tf.keras.layers.LSTM(32),
+        tf.keras.layers.Dense(1)
+    ])
+
+
 
 def train_and_evaluate_models(models, X_train, X_test, y_train, y_test, load=False):
     
@@ -225,13 +266,21 @@ def estimate_flops(model):
         elif isinstance(layer, Dense):
             N_in, N_out = layer.input_shape[-1], layer.output_shape[-1]
             total_flops += 2 * N_in * N_out
+        elif isinstance(layer, keras.layers.LSTM):
+            # For an LSTM layer, the number of FLOPs is approximately
+            # 4 * (size_of_input + size_of_output) * (size_of_output) * sequence_length
+            # Note that this is a simplification and might not be perfectly accurate.
+            size_of_input = layer.input_shape[-1]
+            size_of_output = layer.output_shape[-1]
+            sequence_length = layer.input_shape[-2]  # Assuming the input shape is (batch_size, sequence_length, num_features)
+            total_flops += 4 * (size_of_input + size_of_output) * size_of_output * sequence_length
     return total_flops
 
 def calculate_flops_bounds(models):
     flops_values = [estimate_flops(model) for model in models]
     return min(flops_values), max(flops_values)
 
-model1, model2, model2_sigmoid, model3 = create_models()
+model1, model2, model2_sigmoid, model3 = create_cnn_models()
 
 
 models = [model1, model2,  model2_sigmoid, model3]  
