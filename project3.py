@@ -267,12 +267,12 @@ def estimate_flops(model):
             N_in, N_out = layer.input_shape[-1], layer.output_shape[-1]
             total_flops += 2 * N_in * N_out
         elif isinstance(layer, keras.layers.LSTM):
-            # For an LSTM layer, the number of FLOPs is approximately
+            # Für eine LSTM layer, ist es ungefähr
             # 4 * (size_of_input + size_of_output) * (size_of_output) * sequence_length
-            # Note that this is a simplification and might not be perfectly accurate.
+            
             size_of_input = layer.input_shape[-1]
             size_of_output = layer.output_shape[-1]
-            sequence_length = layer.input_shape[-2]  # Assuming the input shape is (batch_size, sequence_length, num_features)
+            sequence_length = layer.input_shape[-2] 
             total_flops += 4 * (size_of_input + size_of_output) * size_of_output * sequence_length
     return total_flops
 

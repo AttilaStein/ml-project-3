@@ -20,19 +20,19 @@ def main():
 
     # Train models
     # trained_cnn_models, X_cnn_test, y_cnn_test = model_trainer.train_cnn(cnn_models_with_labels)
-    # trained_lstm_models, X_lstm_test, y_lstm_test = model_trainer.train_lstm(lstm_models_with_labels)
+    trained_lstm_models, X_lstm_test, y_lstm_test = model_trainer.train_lstm(lstm_models_with_labels)
 
     # Load models
     trained_cnn_data = [model_trainer.load_trained_model(label, 'cnn') for label in cnn_labels]
-    trained_lstm_data = [model_trainer.load_trained_model(label, 'lstm') for label in lstm_labels]
+    # trained_lstm_data = [model_trainer.load_trained_model(label, 'lstm') for label in lstm_labels]
 
     # Extract the models and test data
     trained_cnn_models, X_cnn_test, y_cnn_test = zip(*trained_cnn_data)
-    trained_lstm_models, X_lstm_test, y_lstm_test = zip(*trained_lstm_data)
+    # trained_lstm_models, X_lstm_test, y_lstm_test = zip(*trained_lstm_data)
 
     # Evaluate models
     cnn_results = [model_evaluator.evaluate_model(model, X_cnn_test[0], y_cnn_test[0]) for model in trained_cnn_models]
-    lstm_results = [model_evaluator.evaluate_model(model, X_lstm_test[0], y_lstm_test[0]) for model in trained_lstm_models]
+    lstm_results = [model_evaluator.evaluate_model(model, X_lstm_test, y_lstm_test) for model in trained_lstm_models]
 
     # Plot results
     result_plotter.plot_results(cnn_results, cnn_labels, 'cnn')
